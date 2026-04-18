@@ -10,10 +10,14 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 
-# Configuration
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', secrets.token_hex(32))
+# ============================================
+# 🔐 HARDCODED SECRET KEY – NO ENV VAR NEEDED
+# ============================================
+app.config['SECRET_KEY'] = 'my-ultra-secure-fixed-key-2024-change-this-if-you-want'
 
-# Use DATABASE_URL from environment (Render provides PostgreSQL), fallback to SQLite
+# ============================================
+# 🗄️ DATABASE CONFIGURATION
+# ============================================
 database_url = os.environ.get('DATABASE_URL', 'sqlite:///keys.db')
 if database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql://", 1)
@@ -69,18 +73,31 @@ def load_user(user_id):
 # ==================== HELPERS ====================
 
 def generate_key():
-    """Generate a random license key."""
-    return secrets.token_hex(16).upper()  # 32 characters
+    return secrets.token_hex(16).upper()
 
 
 def admin_required(f):
-    """Ensure user is logged in as admin."""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
             return redirect(url_for('login'))
         return f(*args, **kwargs)
     return decorated_function
+
+
+# ============================================
+# 🔁 AUTO‑CREATE TABLES & DEFAULT ADMIN
+# ============================================
+@app.before_request
+def ensure_database():
+    """Automatically create tables and default admin on first request."""
+    db.create_all()
+    if not Admin.query.first():
+        admin = Admin(username='admin')
+        admin.set_password('admin123')  # CHANGE THIS AFTER FIRST LOGIN
+        db.session.add(admin)
+        db.session.commit()
+        print("✅ Default admin created: username='admin', password='admin123'")
 
 
 # ==================== ROUTES ====================
@@ -177,7 +194,7 @@ def delete_key(key_id):
     return redirect(url_for('dashboard'))
 
 
-# Optional API endpoint for external validation (e.g., from your checker)
+# Optional API endpoint
 @app.route('/api/validate_key', methods=['POST'])
 def validate_key():
     data = request.get_json()
@@ -198,23 +215,7 @@ def validate_key():
     return {'valid': False, 'message': 'Invalid or expired key'}, 403
 
 
-# ==================== INIT DB ====================
-
-def init_db():
-    db.create_all()
-    # Create default admin if none exists
-    if not Admin.query.first():
-        admin = Admin(username='admin')
-        admin.set_password('admin123')  # CHANGE THIS PASSWORD!
-        db.session.add(admin)
-        db.session.commit()
-        print("Default admin created: username='admin', password='admin123'")
-
-
 # ==================== RUN ====================
-
 if __name__ == '__main__':
-    with app.app_context():
-        init_db()
-    # For local development only; Render uses gunicorn
-    app.run(debug=False, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
