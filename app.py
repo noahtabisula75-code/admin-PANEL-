@@ -1,19 +1,18 @@
 import os
 import secrets
+import sys
 from datetime import datetime, timedelta
 from functools import wraps
 
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 
-# Hardcoded secret key (change in production)
 app.config['SECRET_KEY'] = 'my-ultra-secure-fixed-key-2024-change-this'
 
-# Database configuration
 database_url = os.environ.get('DATABASE_URL', 'sqlite:///keys.db')
 if database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql://", 1)
@@ -51,7 +50,6 @@ class Reseller(UserMixin, db.Model):
     balance_days = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # Relationship
     keys = db.relationship('LicenseKey', backref='reseller', lazy=True)
 
     def set_password(self, password):
@@ -81,7 +79,6 @@ class LicenseKey(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     notes = db.Column(db.String(200), nullable=True)
 
-    # Who created it? (admin or reseller)
     created_by_admin_id = db.Column(db.Integer, db.ForeignKey('admin.id'), nullable=True)
     created_by_reseller_id = db.Column(db.Integer, db.ForeignKey('reseller.id'), nullable=True)
 
@@ -113,7 +110,7 @@ def generate_key():
     return secrets.token_hex(16).upper()
 
 def generate_referral_code():
-    return secrets.token_hex(4).upper()  # 8 characters
+    return secrets.token_hex(4).upper()
 
 
 def admin_required(f):
@@ -136,24 +133,39 @@ def reseller_required(f):
     return decorated_function
 
 
-# ==================== DATABASE INIT ====================
+# ==================== DATABASE INIT (Safe) ====================
 
-@app.before_request
-def ensure_database():
-    db.create_all()
-    if not Admin.query.first():
-        admin = Admin(username='admin')
-        admin.set_password('admin123')
-        db.session.add(admin)
-        db.session.commit()
-        print("✅ Default admin created.")
+def init_db():
+    with app.app_context():
+        try:
+            db.create_all()
+            if not Admin.query.first():
+                admin = Admin(username='admin')
+                admin.set_password('admin123')
+                db.session.add(admin)
+                db.session.commit()
+                print("✅ Default admin created.", file=sys.stderr)
+        except Exception as e:
+            print(f"❌ Database init failed: {e}", file=sys.stderr)
+            raise e
+
+init_db()
 
 
-# ==================== ADMIN ROUTES ====================
+# ==================== ROUTES ====================
 
 @app.route('/')
 def index():
     return redirect(url_for('dashboard'))
+
+
+@app.route('/test')
+def test():
+    try:
+        admin_count = Admin.query.count()
+        return f"✅ Database OK. Admins: {admin_count}"
+    except Exception as e:
+        return f"❌ Database error: {e}"
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -289,7 +301,6 @@ def reseller_register():
             flash('Username already taken.', 'danger')
             return render_template('reseller_register.html')
 
-        # Validate referral code
         ref = ReferralCode.query.filter_by(code=referral_code, is_used=False).first()
         if not ref:
             flash('Invalid or already used referral code.', 'danger')
