@@ -8,11 +8,12 @@ from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
+from sqlalchemy import text, inspect
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'my-ultra-secure-fixed-key-2024-change-this')
 
-app.config['SECRET_KEY'] = 'my-ultra-secure-fixed-key-2024-change-this'
-
+# Database configuration
 database_url = os.environ.get('DATABASE_URL', 'sqlite:///keys.db')
 if database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql://", 1)
@@ -133,21 +134,39 @@ def reseller_required(f):
     return decorated_function
 
 
-# ==================== DATABASE INIT (Safe) ====================
+# ==================== AUTOMATIC SCHEMA MIGRATION ====================
+
+def migrate_database():
+    """Add missing columns to existing tables (PostgreSQL)."""
+    with app.app_context():
+        inspector = inspect(db.engine)
+        columns = [col['name'] for col in inspector.get_columns('license_key')]
+
+        if 'created_by_admin_id' not in columns:
+            print("Adding column created_by_admin_id to license_key...", file=sys.stderr)
+            with db.engine.connect() as conn:
+                conn.execute(text("ALTER TABLE license_key ADD COLUMN created_by_admin_id INTEGER REFERENCES admin(id)"))
+                conn.commit()
+        if 'created_by_reseller_id' not in columns:
+            print("Adding column created_by_reseller_id to license_key...", file=sys.stderr)
+            with db.engine.connect() as conn:
+                conn.execute(text("ALTER TABLE license_key ADD COLUMN created_by_reseller_id INTEGER REFERENCES reseller(id)"))
+                conn.commit()
+
+
+# ==================== DATABASE INIT ====================
 
 def init_db():
     with app.app_context():
-        try:
-            db.create_all()
-            if not Admin.query.first():
-                admin = Admin(username='admin')
-                admin.set_password('admin123')
-                db.session.add(admin)
-                db.session.commit()
-                print("✅ Default admin created.", file=sys.stderr)
-        except Exception as e:
-            print(f"❌ Database init failed: {e}", file=sys.stderr)
-            raise e
+        db.create_all()
+        # Run migration for existing tables
+        migrate_database()
+        if not Admin.query.first():
+            admin = Admin(username='admin')
+            admin.set_password('admin123')
+            db.session.add(admin)
+            db.session.commit()
+            print("✅ Default admin created.", file=sys.stderr)
 
 init_db()
 
