@@ -10,166 +10,317 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <style>
         :root {
-            --bg: #f1f5f9;
+            /* Light theme (default) */
+            --bg-body: #f1f5f9;
             --surface: #ffffff;
+            --surface-hover: #f8fafc;
+            --sidebar-bg: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+            --sidebar-text: #e2e8f0;
+            --sidebar-icon-bg: rgba(255,255,255,0.1);
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --border-color: #e2e8f0;
             --primary: #3b82f6;
             --primary-hover: #2563eb;
-            --nav-start: #1e293b;
-            --nav-end: #0f172a;
-            --text-muted: #64748b;
-            --border: #e2e8f0;
-            --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-            --shadow: 0 4px 6px -1px rgba(0,0,0,0.06), 0 2px 4px -2px rgba(0,0,0,0.05);
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+            --shadow: 0 4px 6px -1px rgba(0,0,0,0.06), 0 2px 4px -2px rgba(0,0,0,0.04);
             --shadow-lg: 0 20px 25px -5px rgba(0,0,0,0.08), 0 8px 10px -6px rgba(0,0,0,0.04);
             --radius-md: 18px;
             --radius-sm: 12px;
             --transition: 0.25s cubic-bezier(0.2, 0, 0, 1);
         }
 
-        body {
-            background: var(--bg);
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            color: #0f172a;
+        .dark {
+            --bg-body: #0f172a;
+            --surface: #1e293b;
+            --surface-hover: #273548;
+            --sidebar-bg: linear-gradient(180deg, #020617 0%, #0f172a 100%);
+            --sidebar-text: #cbd5e1;
+            --sidebar-icon-bg: rgba(255,255,255,0.08);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border-color: #334155;
+            --primary: #60a5fa;
+            --primary-hover: #3b82f6;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
+            --shadow: 0 4px 6px -1px rgba(0,0,0,0.3);
+            --shadow-lg: 0 20px 25px -5px rgba(0,0,0,0.4);
         }
 
-        /* Navbar */
-        .navbar {
-            background: linear-gradient(135deg, var(--nav-start) 0%, var(--nav-end) 100%);
-            padding: 14px 0;
-            box-shadow: var(--shadow-lg);
-            backdrop-filter: blur(4px);
-            position: sticky;
-            top: 0;
-            z-index: 1020;
+        body {
+            background: var(--bg-body);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            color: var(--text-primary);
+            transition: background 0.3s, color 0.3s;
+            margin: 0;
+            overflow-x: hidden;
         }
-        .navbar-brand {
+
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 260px;
+            height: 100vh;
+            background: var(--sidebar-bg);
+            color: var(--sidebar-text);
+            z-index: 1040;
+            transition: transform 0.3s ease;
+            box-shadow: var(--shadow-lg);
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            padding: 24px 16px;
+        }
+        .sidebar-brand {
+            font-size: 1.5rem;
             font-weight: 700;
-            font-size: 1.35rem;
-            color: white !important;
             display: flex;
             align-items: center;
-            gap: 10px;
-            transition: var(--transition);
+            gap: 12px;
+            color: white;
+            margin-bottom: 32px;
+            padding: 0 8px;
         }
-        .navbar-brand i {
-            font-size: 1.6rem;
-            background: rgba(255,255,255,0.13);
-            padding: 8px;
-            border-radius: 12px;
-            box-shadow: 0 0 15px rgba(59,130,246,0.3);
+        .sidebar-brand i {
+            background: var(--sidebar-icon-bg);
+            padding: 10px;
+            border-radius: 14px;
+            font-size: 1.8rem;
         }
-        .navbar-brand:hover {
-            transform: scale(1.02);
-        }
-        .nav-link {
-            font-weight: 500;
-            display: flex !important;
-            align-items: center;
+        .sidebar-nav {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
             gap: 6px;
-            padding: 8px 16px !important;
-            border-radius: 50px;
-            transition: var(--transition);
-            margin-left: 4px;
         }
-        .nav-link:hover {
+        .sidebar-nav a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            color: var(--sidebar-text);
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            margin-bottom: 2px;
+        }
+        .sidebar-nav a i {
+            font-size: 1.25rem;
+            width: 24px;
+            text-align: center;
+        }
+        .sidebar-nav a:hover, .sidebar-nav a.active {
             background: rgba(255,255,255,0.12);
-            transform: translateY(-1px);
+            color: white;
+            transform: translateX(4px);
+        }
+        .sidebar-footer {
+            margin-top: auto;
+            padding-top: 20px;
+        }
+        .theme-toggle-btn {
+            width: 100%;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: var(--sidebar-text);
+            padding: 10px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-weight: 500;
+            transition: 0.2s;
+            cursor: pointer;
+        }
+        .theme-toggle-btn:hover {
+            background: rgba(255,255,255,0.15);
+            color: white;
         }
 
-        /* Cards */
-        .stats-card, .table-card {
-            background: var(--surface);
+        /* Main content */
+        .main-content {
+            margin-left: 260px;
+            padding: 28px 32px;
+            transition: margin-left 0.3s;
+            min-height: 100vh;
+        }
+
+        /* Mobile sidebar toggle */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1035;
+        }
+        .mobile-menu-btn {
+            display: none;
+            background: transparent;
             border: none;
+            color: var(--text-primary);
+            font-size: 1.8rem;
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 8px;
+            transition: 0.2s;
+        }
+        .mobile-menu-btn:hover {
+            background: rgba(0,0,0,0.05);
+        }
+        .dark .mobile-menu-btn:hover {
+            background: rgba(255,255,255,0.05);
+        }
+
+        @media (max-width: 992px) {
+            .sidebar {
+                transform: translateX(-100%);
+                box-shadow: none;
+            }
+            .sidebar.open {
+                transform: translateX(0);
+                box-shadow: var(--shadow-lg);
+            }
+            .sidebar-overlay.active {
+                display: block;
+            }
+            .main-content {
+                margin-left: 0;
+                padding: 20px 16px;
+            }
+            .mobile-menu-btn {
+                display: block;
+            }
+        }
+
+        /* Cards & components */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 28px;
+        }
+        .stat-card {
+            background: var(--surface);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            border: 1px solid var(--border-color);
+        }
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+        }
+        .stat-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 16px;
+            background: rgba(59,130,246,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            color: var(--primary);
+        }
+        .stat-info h6 {
+            margin: 0;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+        .stat-info span {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1.2;
+        }
+
+        .section-card {
+            background: var(--surface);
             border-radius: var(--radius-md);
             box-shadow: var(--shadow);
-            padding: 24px;
             margin-bottom: 28px;
-            transition: var(--transition);
-            animation: fadeInUp 0.5s ease-out both;
-        }
-        .stats-card:hover, .table-card:hover {
-            box-shadow: var(--shadow-lg);
-            transform: translateY(-2px);
-        }
-        .table-card {
-            padding: 0;
+            border: 1px solid var(--border-color);
             overflow: hidden;
+            transition: var(--transition);
+            animation: fadeInUp 0.5s ease both;
         }
-        .card-header {
-            background: transparent;
-            border-bottom: 1px solid var(--border);
-            padding: 20px 24px;
+        .section-card:hover {
+            box-shadow: var(--shadow-lg);
+        }
+        .card-header-custom {
+            padding: 18px 24px;
+            border-bottom: 1px solid var(--border-color);
             font-weight: 700;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
+            background: var(--surface);
         }
-        .card-header i {
-            font-size: 1.4rem;
+        .card-header-custom i {
+            font-size: 1.7rem;
             color: var(--primary);
-            background: rgba(59,130,246,0.1);
+            background: rgba(59,130,246,0.08);
             padding: 8px;
             border-radius: 10px;
         }
 
-        /* Stagger animation */
-        .stats-card:nth-child(1) { animation-delay: 0.05s; }
-        .table-card:nth-child(2) { animation-delay: 0.15s; }
-        .table-card:nth-child(3) { animation-delay: 0.25s; }
-        .table-card:nth-child(4) { animation-delay: 0.35s; }
-
         @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(16px); }
+            from { opacity: 0; transform: translateY(12px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Form controls */
         .form-control, .form-select {
-            border-radius: 12px;
-            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-color);
             padding: 10px 16px;
-            transition: var(--transition);
-            box-shadow: var(--shadow-sm);
+            background: var(--surface);
+            color: var(--text-primary);
+            transition: 0.2s;
         }
-        .form-control:focus, .form-select:focus {
+        .form-control:focus {
             border-color: var(--primary);
             box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
         }
 
-        /* Enhanced Buttons */
         .btn {
-            border-radius: 12px;
-            padding: 10px 22px;
+            border-radius: var(--radius-sm);
+            padding: 10px 20px;
             font-weight: 600;
             display: inline-flex;
             align-items: center;
             gap: 8px;
             transition: var(--transition);
             border: none;
-            letter-spacing: -0.01em;
         }
         .btn-primary {
-            background: linear-gradient(145deg, #3b82f6, #2563eb);
+            background: var(--primary);
             box-shadow: 0 4px 12px rgba(59,130,246,0.3);
-            color: #fff;
+            color: white;
         }
         .btn-primary:hover {
-            background: linear-gradient(145deg, #2563eb, #1d4ed8);
+            background: var(--primary-hover);
             transform: translateY(-2px);
             box-shadow: 0 8px 18px rgba(37,99,235,0.35);
         }
         .btn-outline-action {
-            background: white;
-            border: 1px solid var(--border);
-            color: var(--text-muted);
-            padding: 6px 14px;
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
             border-radius: 10px;
             font-size: 0.85rem;
+            padding: 6px 14px;
         }
         .btn-outline-action:hover {
-            background: #f8fafc;
-            border-color: #cbd5e1;
-            transform: translateY(-1px);
+            background: var(--surface-hover);
+            border-color: #94a3b8;
         }
         .btn-outline-warning, .btn-outline-success, .btn-outline-danger {
             border-radius: 10px;
@@ -183,187 +334,166 @@
             border-color: #fbbf24;
             background: #fffbeb;
         }
-        .btn-outline-warning:hover {
-            background: #fef3c7;
-            color: #92400e;
-            border-color: #f59e0b;
-            transform: translateY(-1px);
-        }
+        .btn-outline-warning:hover { background: #fef3c7; }
         .btn-outline-success {
             color: #166534;
             border-color: #86efac;
             background: #f0fdf4;
         }
-        .btn-outline-success:hover {
-            background: #dcfce7;
-            color: #14532d;
-            border-color: #4ade80;
-            transform: translateY(-1px);
-        }
+        .btn-outline-success:hover { background: #dcfce7; }
         .btn-outline-danger {
             color: #991b1b;
             border-color: #fecaca;
             background: #fef2f2;
         }
-        .btn-outline-danger:hover {
-            background: #fee2e2;
-            color: #7f1d1d;
-            border-color: #f87171;
-            transform: translateY(-1px);
-        }
+        .btn-outline-danger:hover { background: #fee2e2; }
 
-        /* Badges */
-        .badge-active {
-            background: #dcfce7;
-            color: #166534;
-            border-radius: 50px;
-            padding: 5px 14px;
-            font-weight: 600;
-        }
-        .badge-expired {
-            background: #fef9c3;
-            color: #854d0e;
-            border-radius: 50px;
-            padding: 5px 14px;
-            font-weight: 600;
-        }
-        .badge-revoked {
-            background: #fee2e2;
-            color: #991b1b;
-            border-radius: 50px;
-            padding: 5px 14px;
-            font-weight: 600;
-        }
-        .badge-success {
-            background: #d1fae5;
-            color: #065f46;
-            border-radius: 50px;
-            padding: 5px 14px;
-        }
-        .badge-secondary {
-            background: #e2e8f0;
-            color: #334155;
-            border-radius: 50px;
-            padding: 5px 14px;
-        }
+        .badge-active { background: #dcfce7; color: #166534; border-radius: 50px; padding: 4px 12px; }
+        .badge-expired { background: #fef9c3; color: #854d0e; border-radius: 50px; padding: 4px 12px; }
+        .badge-revoked { background: #fee2e2; color: #991b1b; border-radius: 50px; padding: 4px 12px; }
+        .badge-success { background: #d1fae5; color: #065f46; border-radius: 50px; padding: 4px 12px; }
+        .badge-secondary { background: #e2e8f0; color: #334155; border-radius: 50px; padding: 4px 12px; }
 
-        /* Tables */
         .table {
             margin-bottom: 0;
+            color: var(--text-primary);
         }
         .table thead th {
-            background: #f8fafc;
+            background: var(--surface-hover);
+            border-bottom: 2px solid var(--border-color);
+            color: var(--text-secondary);
             font-weight: 600;
-            color: #475569;
-            border-bottom: 2px solid #e2e8f0;
-            padding: 14px 20px;
-            letter-spacing: 0.02em;
         }
         .table tbody td {
-            padding: 14px 20px;
+            border-color: var(--border-color);
             vertical-align: middle;
-            border-bottom: 1px solid #f1f5f9;
-        }
-        .table tbody tr {
-            transition: background 0.15s ease;
         }
         .table tbody tr:hover {
-            background: #f8fafc;
+            background: var(--surface-hover);
         }
         code {
-            background: #f1f5f9;
+            background: var(--surface-hover);
             padding: 3px 10px;
             border-radius: 6px;
-            font-size: 0.9rem;
-            color: #1e293b;
-            border: 1px solid #e2e8f0;
+            border: 1px solid var(--border-color);
+            color: var(--primary);
         }
-
-        /* Alert animation */
         .alert {
             border-radius: var(--radius-sm);
             border: none;
             box-shadow: var(--shadow-sm);
-            animation: fadeInUp 0.4s ease-out both;
-            backdrop-filter: blur(4px);
-        }
-        .alert-dismissible .btn-close {
-            padding: 1rem;
-        }
-
-        /* Responsive adjustments */
-        @media (max-width: 768px) {
-            .navbar-brand { font-size: 1.1rem; }
-            .navbar-nav { gap: 6px; }
         }
     </style>
 </head>
-<body>
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg">
-        <div class="container-fluid px-4">
-            <a class="navbar-brand" href="#">
-                <i class="bi bi-key-fill"></i> Key Manager Admin
-            </a>
-            <div class="navbar-nav ms-auto flex-row align-items-center">
-                <a class="nav-link text-white" href="{{ url_for('create_key') }}">
-                    <i class="bi bi-plus-circle"></i> Create Key
-                </a>
-                <a class="nav-link text-white" href="{{ url_for('logout') }}">
-                    <i class="bi bi-box-arrow-right"></i> Logout
-                </a>
-            </div>
+<body class="light">
+    <!-- Sidebar Overlay for mobile -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <i class="bi bi-key-fill"></i> KeyManager
         </div>
-    </nav>
+        <nav class="sidebar-nav">
+            <a href="#" class="active"><i class="bi bi-speedometer2"></i> Dashboard</a>
+            <a href="{{ url_for('create_key') }}"><i class="bi bi-plus-circle"></i> Create Key</a>
+            <a href="#referral-section"><i class="bi bi-gift"></i> Referral Codes</a>
+            <a href="#resellers-section"><i class="bi bi-people"></i> Resellers</a>
+            <a href="#keys-section"><i class="bi bi-key"></i> License Keys</a>
+        </nav>
+        <div class="sidebar-footer">
+            <button class="theme-toggle-btn" id="themeToggle">
+                <i class="bi bi-moon-stars" id="themeIcon"></i> <span id="themeText">Dark Mode</span>
+            </button>
+            <a href="{{ url_for('logout') }}" class="btn btn-outline-light w-100 mt-3 d-flex align-items-center gap-2 justify-content-center" style="border-radius:12px;">
+                <i class="bi bi-box-arrow-right"></i> Logout
+            </a>
+        </div>
+    </aside>
 
     <!-- Main Content -->
-    <div class="container-fluid px-4 py-4">
+    <div class="main-content" id="mainContent">
+        <!-- Mobile header row -->
+        <div class="d-flex align-items-center justify-content-between mb-4 d-lg-none">
+            <button class="mobile-menu-btn" id="mobileMenuBtn">
+                <i class="bi bi-list"></i>
+            </button>
+            <h4 class="mb-0">Key Manager Admin</h4>
+            <div></div> <!-- spacer -->
+        </div>
+
         <!-- Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
                     <div class="alert alert-{{ category }} alert-dismissible fade show d-flex align-items-center gap-3" role="alert">
-                        <i class="bi {% if category == 'success' %}bi-check-circle-fill text-success{% elif category == 'danger' %}bi-exclamation-triangle-fill text-danger{% else %}bi-info-circle-fill text-primary{% endif %} fs-5"></i>
-                        <span>{{ message }}</span>
-                        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+                        <i class="bi {% if category == 'success' %}bi-check-circle-fill{% elif category == 'danger' %}bi-exclamation-triangle-fill{% else %}bi-info-circle-fill{% endif %} fs-5"></i>
+                        {{ message }}
+                        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
                     </div>
                 {% endfor %}
             {% endif %}
         {% endwith %}
 
-        <!-- Referral Code Generator -->
-        <div class="stats-card">
-            <h5 class="mb-3 d-flex align-items-center gap-3">
-                <i class="bi bi-gift-fill fs-3 text-primary"></i> Generate Referral Code for Resellers
-            </h5>
-            <form method="POST" action="{{ url_for('generate_referral') }}" class="row g-3 align-items-end">
-                <div class="col-md-4">
-                    <label class="form-label fw-semibold">Balance (days) <small class="text-muted fw-normal">(₱1 = 1 day)</small></label>
-                    <input type="number" class="form-control" name="balance" min="1" placeholder="e.g., 30" required>
+        <!-- Statistics Row (computed from data) -->
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-icon"><i class="bi bi-key"></i></div>
+                <div class="stat-info">
+                    <h6>Total Keys</h6>
+                    <span>{{ keys|length }}</span>
                 </div>
-                <div class="col-auto">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-plus-circle-dotted"></i> Generate Referral Code
-                    </button>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="bi bi-shield-check"></i></div>
+                <div class="stat-info">
+                    <h6>Active Keys</h6>
+                    <span>{% set active_keys = keys | selectattr('is_active') | list %}{{ active_keys | length }}</span>
                 </div>
-            </form>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="bi bi-people"></i></div>
+                <div class="stat-info">
+                    <h6>Resellers</h6>
+                    <span>{{ resellers|length }}</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="bi bi-ticket-perforated"></i></div>
+                <div class="stat-info">
+                    <h6>Referral Codes</h6>
+                    <span>{{ referral_codes|length }}</span>
+                </div>
+            </div>
         </div>
 
-        <!-- Referral Codes List -->
-        <div class="table-card">
-            <div class="card-header">
+        <!-- Referral Code Generator -->
+        <div class="section-card" id="referral-section">
+            <div class="card-header-custom">
+                <i class="bi bi-gift-fill"></i> Generate Referral Code
+            </div>
+            <div class="p-4">
+                <form method="POST" action="{{ url_for('generate_referral') }}" class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Balance (days) <small class="text-muted">(₱1 = 1 day)</small></label>
+                        <input type="number" class="form-control" name="balance" min="1" placeholder="e.g., 30" required>
+                    </div>
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-plus-circle-dotted"></i> Generate Code</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Referral Codes Table -->
+        <div class="section-card">
+            <div class="card-header-custom">
                 <i class="bi bi-ticket-perforated-fill"></i> Referral Codes
             </div>
             <div class="table-responsive">
                 <table class="table align-middle">
                     <thead>
-                        <tr>
-                            <th>Code</th>
-                            <th>Balance (days)</th>
-                            <th>Status</th>
-                            <th>Created</th>
-                            <th>Used By</th>
-                        </tr>
+                        <tr><th>Code</th><th>Balance (days)</th><th>Status</th><th>Created</th><th>Used By</th></tr>
                     </thead>
                     <tbody>
                         {% for code in referral_codes %}
@@ -386,21 +516,15 @@
             </div>
         </div>
 
-        <!-- Resellers List -->
-        <div class="table-card">
-            <div class="card-header">
+        <!-- Resellers Table -->
+        <div class="section-card" id="resellers-section">
+            <div class="card-header-custom">
                 <i class="bi bi-people-fill"></i> Resellers
             </div>
             <div class="table-responsive">
                 <table class="table align-middle">
                     <thead>
-                        <tr>
-                            <th>Username</th>
-                            <th>Full Name</th>
-                            <th>Balance (days)</th>
-                            <th>Joined</th>
-                            <th>Keys Created</th>
-                        </tr>
+                        <tr><th>Username</th><th>Full Name</th><th>Balance (days)</th><th>Joined</th><th>Keys Created</th></tr>
                     </thead>
                     <tbody>
                         {% for r in resellers %}
@@ -417,22 +541,15 @@
             </div>
         </div>
 
-        <!-- Admin's Keys -->
-        <div class="table-card">
-            <div class="card-header">
+        <!-- License Keys Table -->
+        <div class="section-card" id="keys-section">
+            <div class="card-header-custom">
                 <i class="bi bi-key-fill"></i> Your License Keys (Admin)
             </div>
             <div class="table-responsive">
                 <table class="table align-middle">
                     <thead>
-                        <tr>
-                            <th>Key</th>
-                            <th>Created</th>
-                            <th>Expires</th>
-                            <th>Status</th>
-                            <th>Notes</th>
-                            <th>Actions</th>
-                        </tr>
+                        <tr><th>Key</th><th>Created</th><th>Expires</th><th>Status</th><th>Notes</th><th>Actions</th></tr>
                     </thead>
                     <tbody>
                         {% for key in keys %}
@@ -450,17 +567,11 @@
                             <td>
                                 <div class="d-flex gap-2 flex-wrap">
                                     {% if key.is_active and not key.is_expired() %}
-                                        <a href="{{ url_for('revoke_key', key_id=key.id) }}" class="btn btn-sm btn-outline-warning">
-                                            <i class="bi bi-x-circle"></i> Revoke
-                                        </a>
+                                        <a href="{{ url_for('revoke_key', key_id=key.id) }}" class="btn btn-sm btn-outline-warning"><i class="bi bi-x-circle"></i> Revoke</a>
                                     {% elif not key.is_active %}
-                                        <a href="{{ url_for('activate_key', key_id=key.id) }}" class="btn btn-sm btn-outline-success">
-                                            <i class="bi bi-check-circle"></i> Activate
-                                        </a>
+                                        <a href="{{ url_for('activate_key', key_id=key.id) }}" class="btn btn-sm btn-outline-success"><i class="bi bi-check-circle"></i> Activate</a>
                                     {% endif %}
-                                    <a href="{{ url_for('delete_key', key_id=key.id) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete permanently?')">
-                                        <i class="bi bi-trash3"></i> Delete
-                                    </a>
+                                    <a href="{{ url_for('delete_key', key_id=key.id) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete permanently?')"><i class="bi bi-trash3"></i> Delete</a>
                                 </div>
                             </td>
                         </tr>
@@ -471,7 +582,69 @@
         </div>
     </div>
 
-    <!-- Bootstrap JS for dismissible alerts -->
+    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        (function() {
+            const body = document.body;
+            const themeToggle = document.getElementById('themeToggle');
+            const themeIcon = document.getElementById('themeIcon');
+            const themeText = document.getElementById('themeText');
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            const mobileBtn = document.getElementById('mobileMenuBtn');
+
+            // Theme management
+            function setTheme(theme) {
+                if (theme === 'dark') {
+                    body.classList.add('dark');
+                    themeIcon.className = 'bi bi-sun-fill';
+                    themeText.textContent = 'Light Mode';
+                    localStorage.setItem('theme', 'dark');
+                } else {
+                    body.classList.remove('dark');
+                    themeIcon.className = 'bi bi-moon-stars';
+                    themeText.textContent = 'Dark Mode';
+                    localStorage.setItem('theme', 'light');
+                }
+            }
+
+            // Init theme from localStorage or system preference
+            const storedTheme = localStorage.getItem('theme');
+            if (storedTheme) {
+                setTheme(storedTheme);
+            } else {
+                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                setTheme(prefersDark ? 'dark' : 'light');
+            }
+
+            themeToggle.addEventListener('click', () => {
+                const isDark = body.classList.contains('dark');
+                setTheme(isDark ? 'light' : 'dark');
+            });
+
+            // Mobile sidebar toggle
+            function openSidebar() {
+                sidebar.classList.add('open');
+                overlay.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            }
+            function closeSidebar() {
+                sidebar.classList.remove('open');
+                overlay.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+
+            mobileBtn.addEventListener('click', openSidebar);
+            overlay.addEventListener('click', closeSidebar);
+
+            // Close sidebar when a nav link is clicked (mobile)
+            document.querySelectorAll('.sidebar-nav a').forEach(link => {
+                link.addEventListener('click', () => {
+                    if (window.innerWidth <= 992) closeSidebar();
+                });
+            });
+        })();
+    </script>
 </body>
 </html>
