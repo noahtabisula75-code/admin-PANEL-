@@ -80,7 +80,9 @@ class LicenseKey(db.Model):
     expires_at = db.Column(db.DateTime, nullable=True)
     is_active = db.Column(db.Boolean, default=True)
     notes = db.Column(db.String(200), nullable=True)
-    device_id = db.Column(db.String(64), nullable=True)   # HWID for device binding
+
+    # NEW: device binding
+    device_id = db.Column(db.String(255), nullable=True)   # stores the unique device identifier
 
     # Who created it? (admin or reseller)
     created_by_admin_id = db.Column(db.Integer, db.ForeignKey('admin.id'), nullable=True)
@@ -249,6 +251,21 @@ def delete_key(key_id):
     return redirect(url_for('dashboard'))
 
 
+# NEW: Admin can unbind a key from its device
+@app.route('/unbind/<int:key_id>')
+@admin_required
+def unbind_key(key_id):
+    key = LicenseKey.query.get_or_404(key_id)
+    if key.device_id:
+        old_device = key.device_id
+        key.device_id = None
+        db.session.commit()
+        flash(f'Key {key.key} unbound from device {old_device}.', 'info')
+    else:
+        flash('Key is not bound to any device.', 'info')
+    return redirect(url_for('dashboard'))
+
+
 @app.route('/generate-referral', methods=['POST'])
 @admin_required
 def generate_referral():
@@ -395,84 +412,76 @@ def reseller_activate_key(key_id):
     return redirect(url_for('reseller_dashboard'))
 
 
-# ==================== API ENDPOINTS ====================
-
-# Device activation (one‑time binding)
-@app.route('/api/activate_key', methods=['POST'])
-def activate_device_key():
-    data = request.get_json()
-    if not data:
-        return {'success': False, 'message': 'Invalid request'}, 400
-
-    key = data.get('key')
-    device_id = data.get('device_id')
-    if not key or not device_id:
-        return {'success': False, 'message': 'Key and device_id required'}, 400
-
-    license_key = LicenseKey.query.filter_by(key=key).first()
-    if not license_key:
-        return {'success': False, 'message': 'Key not found'}, 404
-
-    if not license_key.is_active or license_key.is_expired():
-        return {'success': False, 'message': 'Key is revoked or expired'}, 403
-
-    if license_key.device_id and license_key.device_id != device_id:
-        return {'success': False, 'message': 'Key already activated on another device'}, 403
-
-    license_key.device_id = device_id
-    db.session.commit()
-
-    return {
-        'success': True,
-        'message': 'Key activated successfully',
-        'expires': license_key.expires_at.isoformat() if license_key.expires_at else None
-    }
+# NEW: Reseller can unbind a key they created
+@app.route('/reseller/unbind/<int:key_id>')
+@reseller_required
+def reseller_unbind_key(key_id):
+    key = LicenseKey.query.get_or_404(key_id)
+    if key.created_by_reseller_id != current_user.id:
+        flash('Unauthorized.', 'danger')
+        return redirect(url_for('reseller_dashboard'))
+    if key.device_id:
+        old_device = key.device_id
+        key.device_id = None
+        db.session.commit()
+        flash(f'Key {key.key} unbound from device {old_device}.', 'info')
+    else:
+        flash('Key is not bound to any device.', 'info')
+    return redirect(url_for('reseller_dashboard'))
 
 
-# Key validation (now checks device binding)
+# ==================== API ENDPOINT ====================
+
 @app.route('/api/validate_key', methods=['POST'])
 def validate_key():
+    """
+    Validates a license key. Expects JSON:
+    {
+        "key": "ABC123...",
+        "device_id": "unique-hardware-id"
+    }
+    The key will be bound to the device on first successful validation.
+    Subsequent validations from a different device_id will be rejected.
+    """
     data = request.get_json()
     if not data:
         return {'valid': False, 'message': 'Invalid request'}, 400
 
     key = data.get('key')
     device_id = data.get('device_id')
-    if not key:
-        return {'valid': False, 'message': 'Key required'}, 400
+
+    if not key or not device_id:
+        return {'valid': False, 'message': 'Key and device_id are required'}, 400
 
     license_key = LicenseKey.query.filter_by(key=key).first()
+
     if not license_key or not license_key.is_active or license_key.is_expired():
         return {'valid': False, 'message': 'Invalid or expired key'}, 403
 
     # Device binding logic
     if license_key.device_id is None:
-        # Not activated yet – allow validation but warn
-        return {'valid': True, 'message': 'Key not yet activated', 'expires': license_key.expires_at.isoformat() if license_key.expires_at else None}
-
-    if device_id and license_key.device_id != device_id:
-        return {'valid': False, 'message': 'Key is already bound to another device'}, 403
-
-    return {
-        'valid': True,
-        'expires': license_key.expires_at.isoformat() if license_key.expires_at else None,
-        'notes': license_key.notes
-    }
-
-
-# Admin endpoint to reset device binding
-@app.route('/api/deactivate_key', methods=['POST'])
-@admin_required
-def deactivate_device_key():
-    data = request.get_json()
-    key = data.get('key')
-    license_key = LicenseKey.query.filter_by(key=key).first()
-    if not license_key:
-        return {'success': False, 'message': 'Key not found'}, 404
-
-    license_key.device_id = None
-    db.session.commit()
-    return {'success': True, 'message': 'Device binding removed'}
+        # First use: bind this device to the key
+        license_key.device_id = device_id
+        db.session.commit()
+        return {
+            'valid': True,
+            'expires': license_key.expires_at.isoformat() if license_key.expires_at else None,
+            'notes': license_key.notes,
+            'message': 'Key activated and bound to this device.'
+        }
+    elif license_key.device_id == device_id:
+        # Same device, valid
+        return {
+            'valid': True,
+            'expires': license_key.expires_at.isoformat() if license_key.expires_at else None,
+            'notes': license_key.notes
+        }
+    else:
+        # Different device – reject
+        return {
+            'valid': False,
+            'message': 'Key is already in use on another device.'
+        }, 403
 
 
 # ==================== RUN ====================
