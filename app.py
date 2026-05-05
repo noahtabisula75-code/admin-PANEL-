@@ -80,7 +80,7 @@ class LicenseKey(db.Model):
     expires_at = db.Column(db.DateTime, nullable=True)
     is_active = db.Column(db.Boolean, default=True)
     notes = db.Column(db.String(200), nullable=True)
-    device_id = db.Column(db.String(64), nullable=True)   # NEW: HWID binding
+    device_id = db.Column(db.String(64), nullable=True)   # HWID for device binding
 
     # Who created it? (admin or reseller)
     created_by_admin_id = db.Column(db.Integer, db.ForeignKey('admin.id'), nullable=True)
@@ -460,7 +460,7 @@ def validate_key():
     }
 
 
-# (Optional) Admin endpoint to reset device binding
+# Admin endpoint to reset device binding
 @app.route('/api/deactivate_key', methods=['POST'])
 @admin_required
 def deactivate_device_key():
