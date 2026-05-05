@@ -1,17 +1,17 @@
 import os
 import secrets
-import sys
 from datetime import datetime, timedelta
 from functools import wraps
 
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
-from sqlalchemy import text, inspect
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'my-ultra-secure-fixed-key-2024-change-this')
+
+# Hardcoded secret key (change in production)
+app.config['SECRET_KEY'] = 'my-ultra-secure-fixed-key-2024-change-this'
 
 # Database configuration
 database_url = os.environ.get('DATABASE_URL', 'sqlite:///keys.db')
@@ -51,6 +51,7 @@ class Reseller(UserMixin, db.Model):
     balance_days = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+    # Relationship
     keys = db.relationship('LicenseKey', backref='reseller', lazy=True)
 
     def set_password(self, password):
@@ -79,7 +80,9 @@ class LicenseKey(db.Model):
     expires_at = db.Column(db.DateTime, nullable=True)
     is_active = db.Column(db.Boolean, default=True)
     notes = db.Column(db.String(200), nullable=True)
+    device_id = db.Column(db.String(64), nullable=True)   # NEW: HWID binding
 
+    # Who created it? (admin or reseller)
     created_by_admin_id = db.Column(db.Integer, db.ForeignKey('admin.id'), nullable=True)
     created_by_reseller_id = db.Column(db.Integer, db.ForeignKey('reseller.id'), nullable=True)
 
@@ -111,7 +114,7 @@ def generate_key():
     return secrets.token_hex(16).upper()
 
 def generate_referral_code():
-    return secrets.token_hex(4).upper()
+    return secrets.token_hex(4).upper()  # 8 characters
 
 
 def admin_required(f):
@@ -134,57 +137,24 @@ def reseller_required(f):
     return decorated_function
 
 
-# ==================== AUTOMATIC SCHEMA MIGRATION ====================
-
-def migrate_database():
-    """Add missing columns to existing tables (PostgreSQL)."""
-    with app.app_context():
-        inspector = inspect(db.engine)
-        columns = [col['name'] for col in inspector.get_columns('license_key')]
-
-        if 'created_by_admin_id' not in columns:
-            print("Adding column created_by_admin_id to license_key...", file=sys.stderr)
-            with db.engine.connect() as conn:
-                conn.execute(text("ALTER TABLE license_key ADD COLUMN created_by_admin_id INTEGER REFERENCES admin(id)"))
-                conn.commit()
-        if 'created_by_reseller_id' not in columns:
-            print("Adding column created_by_reseller_id to license_key...", file=sys.stderr)
-            with db.engine.connect() as conn:
-                conn.execute(text("ALTER TABLE license_key ADD COLUMN created_by_reseller_id INTEGER REFERENCES reseller(id)"))
-                conn.commit()
-
-
 # ==================== DATABASE INIT ====================
 
-def init_db():
-    with app.app_context():
-        db.create_all()
-        # Run migration for existing tables
-        migrate_database()
-        if not Admin.query.first():
-            admin = Admin(username='admin')
-            admin.set_password('admin123')
-            db.session.add(admin)
-            db.session.commit()
-            print("✅ Default admin created.", file=sys.stderr)
-
-init_db()
+@app.before_request
+def ensure_database():
+    db.create_all()
+    if not Admin.query.first():
+        admin = Admin(username='admin')
+        admin.set_password('admin123')
+        db.session.add(admin)
+        db.session.commit()
+        print("✅ Default admin created.")
 
 
-# ==================== ROUTES ====================
+# ==================== ADMIN ROUTES ====================
 
 @app.route('/')
 def index():
     return redirect(url_for('dashboard'))
-
-
-@app.route('/test')
-def test():
-    try:
-        admin_count = Admin.query.count()
-        return f"✅ Database OK. Admins: {admin_count}"
-    except Exception as e:
-        return f"❌ Database error: {e}"
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -320,6 +290,7 @@ def reseller_register():
             flash('Username already taken.', 'danger')
             return render_template('reseller_register.html')
 
+        # Validate referral code
         ref = ReferralCode.query.filter_by(code=referral_code, is_used=False).first()
         if not ref:
             flash('Invalid or already used referral code.', 'danger')
@@ -424,8 +395,41 @@ def reseller_activate_key(key_id):
     return redirect(url_for('reseller_dashboard'))
 
 
-# ==================== API ENDPOINT ====================
+# ==================== API ENDPOINTS ====================
 
+# Device activation (one‑time binding)
+@app.route('/api/activate_key', methods=['POST'])
+def activate_device_key():
+    data = request.get_json()
+    if not data:
+        return {'success': False, 'message': 'Invalid request'}, 400
+
+    key = data.get('key')
+    device_id = data.get('device_id')
+    if not key or not device_id:
+        return {'success': False, 'message': 'Key and device_id required'}, 400
+
+    license_key = LicenseKey.query.filter_by(key=key).first()
+    if not license_key:
+        return {'success': False, 'message': 'Key not found'}, 404
+
+    if not license_key.is_active or license_key.is_expired():
+        return {'success': False, 'message': 'Key is revoked or expired'}, 403
+
+    if license_key.device_id and license_key.device_id != device_id:
+        return {'success': False, 'message': 'Key already activated on another device'}, 403
+
+    license_key.device_id = device_id
+    db.session.commit()
+
+    return {
+        'success': True,
+        'message': 'Key activated successfully',
+        'expires': license_key.expires_at.isoformat() if license_key.expires_at else None
+    }
+
+
+# Key validation (now checks device binding)
 @app.route('/api/validate_key', methods=['POST'])
 def validate_key():
     data = request.get_json()
@@ -433,17 +437,42 @@ def validate_key():
         return {'valid': False, 'message': 'Invalid request'}, 400
 
     key = data.get('key')
+    device_id = data.get('device_id')
     if not key:
         return {'valid': False, 'message': 'Key required'}, 400
 
     license_key = LicenseKey.query.filter_by(key=key).first()
-    if license_key and license_key.is_active and not license_key.is_expired():
-        return {
-            'valid': True,
-            'expires': license_key.expires_at.isoformat() if license_key.expires_at else None,
-            'notes': license_key.notes
-        }
-    return {'valid': False, 'message': 'Invalid or expired key'}, 403
+    if not license_key or not license_key.is_active or license_key.is_expired():
+        return {'valid': False, 'message': 'Invalid or expired key'}, 403
+
+    # Device binding logic
+    if license_key.device_id is None:
+        # Not activated yet – allow validation but warn
+        return {'valid': True, 'message': 'Key not yet activated', 'expires': license_key.expires_at.isoformat() if license_key.expires_at else None}
+
+    if device_id and license_key.device_id != device_id:
+        return {'valid': False, 'message': 'Key is already bound to another device'}, 403
+
+    return {
+        'valid': True,
+        'expires': license_key.expires_at.isoformat() if license_key.expires_at else None,
+        'notes': license_key.notes
+    }
+
+
+# (Optional) Admin endpoint to reset device binding
+@app.route('/api/deactivate_key', methods=['POST'])
+@admin_required
+def deactivate_device_key():
+    data = request.get_json()
+    key = data.get('key')
+    license_key = LicenseKey.query.filter_by(key=key).first()
+    if not license_key:
+        return {'success': False, 'message': 'Key not found'}, 404
+
+    license_key.device_id = None
+    db.session.commit()
+    return {'success': True, 'message': 'Device binding removed'}
 
 
 # ==================== RUN ====================
