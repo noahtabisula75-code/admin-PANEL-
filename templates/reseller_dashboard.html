@@ -3,54 +3,421 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reseller Dashboard</title>
+    <title>Reseller Dashboard • Key Manager</title>
+    <!-- Bootstrap 5.3 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <style>
-        body { background: #f1f5f9; }
-        .navbar { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); }
-        .balance-card { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border-radius: 20px; padding: 25px; }
-        .table-card { border-radius: 20px; overflow: hidden; background: white; }
+        :root {
+            /* Light theme (default) */
+            --bg-body: #f1f5f9;
+            --surface: #ffffff;
+            --surface-hover: #f8fafc;
+            --sidebar-bg: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+            --sidebar-text: #e2e8f0;
+            --sidebar-icon-bg: rgba(255,255,255,0.1);
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --border-color: #e2e8f0;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --green: #10b981;
+            --green-dark: #059669;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+            --shadow: 0 4px 6px -1px rgba(0,0,0,0.06), 0 2px 4px -2px rgba(0,0,0,0.04);
+            --shadow-lg: 0 20px 25px -5px rgba(0,0,0,0.08), 0 8px 10px -6px rgba(0,0,0,0.04);
+            --radius-md: 18px;
+            --radius-sm: 12px;
+            --transition: 0.25s cubic-bezier(0.2, 0, 0, 1);
+        }
+
+        .dark {
+            --bg-body: #0f172a;
+            --surface: #1e293b;
+            --surface-hover: #273548;
+            --sidebar-bg: linear-gradient(180deg, #020617 0%, #0f172a 100%);
+            --sidebar-text: #cbd5e1;
+            --sidebar-icon-bg: rgba(255,255,255,0.08);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border-color: #334155;
+            --primary: #60a5fa;
+            --primary-hover: #3b82f6;
+            --green: #34d399;
+            --green-dark: #10b981;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
+            --shadow: 0 4px 6px -1px rgba(0,0,0,0.3);
+            --shadow-lg: 0 20px 25px -5px rgba(0,0,0,0.4);
+        }
+
+        body {
+            background: var(--bg-body);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            color: var(--text-primary);
+            transition: background 0.3s, color 0.3s;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 260px;
+            height: 100vh;
+            background: var(--sidebar-bg);
+            color: var(--sidebar-text);
+            z-index: 1040;
+            transition: transform 0.3s ease;
+            box-shadow: var(--shadow-lg);
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            padding: 24px 16px;
+        }
+        .sidebar-brand {
+            font-size: 1.5rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: white;
+            margin-bottom: 32px;
+            padding: 0 8px;
+        }
+        .sidebar-brand i {
+            background: var(--sidebar-icon-bg);
+            padding: 10px;
+            border-radius: 14px;
+            font-size: 1.8rem;
+            color: var(--green);
+        }
+        .sidebar-nav {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .sidebar-nav a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            color: var(--sidebar-text);
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            margin-bottom: 2px;
+        }
+        .sidebar-nav a i {
+            font-size: 1.25rem;
+            width: 24px;
+            text-align: center;
+        }
+        .sidebar-nav a:hover,
+        .sidebar-nav a.active {
+            background: rgba(255,255,255,0.12);
+            color: white;
+            transform: translateX(4px);
+        }
+        .sidebar-footer {
+            margin-top: auto;
+            padding-top: 20px;
+        }
+        .theme-toggle-btn {
+            width: 100%;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: var(--sidebar-text);
+            padding: 10px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-weight: 500;
+            transition: 0.2s;
+            cursor: pointer;
+        }
+        .theme-toggle-btn:hover {
+            background: rgba(255,255,255,0.15);
+            color: white;
+        }
+
+        /* Main content */
+        .main-content {
+            margin-left: 260px;
+            padding: 28px 32px;
+            transition: margin-left 0.3s;
+            min-height: 100vh;
+        }
+
+        /* Mobile sidebar */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1035;
+        }
+        .mobile-menu-btn {
+            display: none;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-size: 1.8rem;
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 8px;
+            transition: 0.2s;
+        }
+        .mobile-menu-btn:hover {
+            background: rgba(0,0,0,0.05);
+        }
+        .dark .mobile-menu-btn:hover {
+            background: rgba(255,255,255,0.05);
+        }
+
+        @media (max-width: 992px) {
+            .sidebar {
+                transform: translateX(-100%);
+                box-shadow: none;
+            }
+            .sidebar.open {
+                transform: translateX(0);
+                box-shadow: var(--shadow-lg);
+            }
+            .sidebar-overlay.active {
+                display: block;
+            }
+            .main-content {
+                margin-left: 0;
+                padding: 20px 16px;
+            }
+            .mobile-menu-btn {
+                display: block;
+            }
+        }
+
+        /* Cards */
+        .balance-card {
+            background: linear-gradient(135deg, var(--green) 0%, var(--green-dark) 100%);
+            color: white;
+            border-radius: var(--radius-md);
+            padding: 28px;
+            box-shadow: var(--shadow-lg);
+            transition: var(--transition);
+            transform: translateY(0);
+            animation: fadeInUp 0.5s ease-out;
+        }
+        .balance-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 25px 35px -10px rgba(16,185,129,0.4);
+        }
+        .balance-card h6 {
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 0.8rem;
+            opacity: 0.9;
+        }
+        .balance-card .display-4 {
+            font-weight: 800;
+            line-height: 1.1;
+        }
+
+        .section-card {
+            background: var(--surface);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow);
+            margin-bottom: 28px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            transition: var(--transition);
+            animation: fadeInUp 0.5s ease both;
+        }
+        .section-card:hover {
+            box-shadow: var(--shadow-lg);
+        }
+        .card-header-custom {
+            padding: 18px 24px;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--surface);
+        }
+        .card-header-custom i {
+            font-size: 1.7rem;
+            color: var(--primary);
+            background: rgba(59,130,246,0.08);
+            padding: 8px;
+            border-radius: 10px;
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Buttons */
+        .btn {
+            border-radius: var(--radius-sm);
+            padding: 10px 20px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: var(--transition);
+            border: none;
+        }
+        .btn-primary {
+            background: var(--primary);
+            box-shadow: 0 4px 12px rgba(59,130,246,0.3);
+            color: white;
+        }
+        .btn-primary:hover {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 18px rgba(37,99,235,0.35);
+        }
+        .btn-outline-warning, .btn-outline-success, .btn-outline-danger {
+            border-radius: 10px;
+            padding: 5px 14px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border-width: 2px;
+        }
+        .btn-outline-warning {
+            color: #b45309;
+            border-color: #fbbf24;
+            background: #fffbeb;
+        }
+        .btn-outline-warning:hover { background: #fef3c7; transform: translateY(-1px); }
+        .btn-outline-success {
+            color: #166534;
+            border-color: #86efac;
+            background: #f0fdf4;
+        }
+        .btn-outline-success:hover { background: #dcfce7; transform: translateY(-1px); }
+        .btn-outline-danger {
+            color: #991b1b;
+            border-color: #fecaca;
+            background: #fef2f2;
+        }
+        .btn-outline-danger:hover { background: #fee2e2; transform: translateY(-1px); }
+
+        .badge-active { background: #dcfce7; color: #166534; border-radius: 50px; padding: 4px 12px; }
+        .badge-expired { background: #fef9c3; color: #854d0e; border-radius: 50px; padding: 4px 12px; }
+        .badge-revoked { background: #fee2e2; color: #991b1b; border-radius: 50px; padding: 4px 12px; }
+
+        .table {
+            margin-bottom: 0;
+            color: var(--text-primary);
+        }
+        .table thead th {
+            background: var(--surface-hover);
+            border-bottom: 2px solid var(--border-color);
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+        .table tbody td {
+            border-color: var(--border-color);
+            vertical-align: middle;
+        }
+        .table tbody tr:hover {
+            background: var(--surface-hover);
+        }
+        code {
+            background: var(--surface-hover);
+            padding: 3px 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            color: var(--primary);
+        }
+        .alert {
+            border-radius: var(--radius-sm);
+            border: none;
+            box-shadow: var(--shadow-sm);
+        }
     </style>
 </head>
-<body>
-    <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container-fluid px-4">
-            <a class="navbar-brand" href="#"><i class="bi bi-shop"></i> Reseller Panel</a>
-            <div class="navbar-nav ms-auto">
-                <span class="nav-link text-white"><i class="bi bi-person"></i> {{ current_user.full_name }}</span>
-                <a class="nav-link text-white" href="{{ url_for('reseller_create_key') }}"><i class="bi bi-plus-circle"></i> Create Key</a>
-                <a class="nav-link text-white" href="{{ url_for('logout') }}"><i class="bi bi-box-arrow-right"></i> Logout</a>
-            </div>
-        </div>
-    </nav>
+<body class="light">
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-    <div class="container-fluid px-4 py-4">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <i class="bi bi-shop"></i> Reseller Panel
+        </div>
+        <nav class="sidebar-nav">
+            <a href="#" class="active"><i class="bi bi-speedometer2"></i> Dashboard</a>
+            <a href="{{ url_for('reseller_create_key') }}"><i class="bi bi-plus-circle"></i> Create Key</a>
+        </nav>
+        <div class="sidebar-footer">
+            <button class="theme-toggle-btn" id="themeToggle">
+                <i class="bi bi-moon-stars" id="themeIcon"></i> <span id="themeText">Dark Mode</span>
+            </button>
+            <a href="{{ url_for('logout') }}" class="btn btn-outline-light w-100 mt-3 d-flex align-items-center gap-2 justify-content-center" style="border-radius:12px;">
+                <i class="bi bi-box-arrow-right"></i> Logout
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="main-content" id="mainContent">
+        <!-- Mobile header -->
+        <div class="d-flex align-items-center justify-content-between mb-4 d-lg-none">
+            <button class="mobile-menu-btn" id="mobileMenuBtn">
+                <i class="bi bi-list"></i>
+            </button>
+            <h4 class="mb-0">Reseller Panel</h4>
+            <div></div>
+        </div>
+
+        <!-- Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
-            {% for category, message in messages %}
-                <div class="alert alert-{{ category }} alert-dismissible fade show">{{ message }}</div>
-            {% endfor %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show d-flex align-items-center gap-3" role="alert">
+                        <i class="bi {% if category == 'success' %}bi-check-circle-fill{% elif category == 'danger' %}bi-exclamation-triangle-fill{% else %}bi-info-circle-fill{% endif %} fs-5"></i>
+                        {{ message }}
+                        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
         {% endwith %}
 
-        <div class="row mb-4">
-            <div class="col-md-4">
-                <div class="balance-card">
-                    <h6>Available Balance</h6>
-                    <h2 class="display-4">{{ current_user.balance_days }}</h2>
-                    <p>days remaining</p>
-                    <small>₱1 = 1 day</small>
-                </div>
+        <!-- Balance Card -->
+        <div class="balance-card mb-4">
+            <h6><i class="bi bi-wallet2 me-2"></i>Available Balance</h6>
+            <div class="d-flex align-items-baseline gap-3">
+                <h2 class="display-4 mb-0">{{ current_user.balance_days }}</h2>
+                <span class="fs-5 opacity-75">days remaining</span>
             </div>
+            <small class="opacity-75">₱1 = 1 day</small>
         </div>
 
-        <div class="table-card">
-            <div class="card-header bg-white p-4">
-                <h5><i class="bi bi-key"></i> Your Generated License Keys</h5>
+        <!-- License Keys Table -->
+        <div class="section-card">
+            <div class="card-header-custom">
+                <i class="bi bi-key-fill"></i> Your Generated License Keys
             </div>
             <div class="table-responsive">
-                <table class="table mb-0">
+                <table class="table align-middle">
                     <thead>
-                        <tr><th>Key</th><th>Created</th><th>Expires</th><th>Status</th><th>Notes</th><th>Actions</th></tr>
+                        <tr>
+                            <th>Key</th>
+                            <th>Created</th>
+                            <th>Expires</th>
+                            <th>Status</th>
+                            <th>Notes</th>
+                            <th>Actions</th>
+                        </tr>
                     </thead>
                     <tbody>
                         {% for key in keys %}
@@ -60,15 +427,23 @@
                             <td>{{ key.expires_at.strftime('%Y-%m-%d') if key.expires_at else 'Never' }}</td>
                             <td>
                                 {% set status = key.status() %}
-                                <span class="badge {% if status == 'Active' %}bg-success{% elif status == 'Expired' %}bg-warning{% else %}bg-danger{% endif %}">{{ status }}</span>
+                                <span class="badge {% if status == 'Active' %}badge-active{% elif status == 'Expired' %}badge-expired{% else %}badge-revoked{% endif %}">
+                                    <i class="bi {% if status == 'Active' %}bi-shield-check{% elif status == 'Expired' %}bi-clock-history{% else %}bi-slash-circle{% endif %} me-1"></i>{{ status }}
+                                </span>
                             </td>
                             <td>{{ key.notes or '-' }}</td>
                             <td>
-                                {% if key.is_active and not key.is_expired() %}
-                                    <a href="{{ url_for('reseller_revoke_key', key_id=key.id) }}" class="btn btn-sm btn-outline-warning">Revoke</a>
-                                {% elif not key.is_active %}
-                                    <a href="{{ url_for('reseller_activate_key', key_id=key.id) }}" class="btn btn-sm btn-outline-success">Activate</a>
-                                {% endif %}
+                                <div class="d-flex gap-2 flex-wrap">
+                                    {% if key.is_active and not key.is_expired() %}
+                                        <a href="{{ url_for('reseller_revoke_key', key_id=key.id) }}" class="btn btn-sm btn-outline-warning">
+                                            <i class="bi bi-x-circle"></i> Revoke
+                                        </a>
+                                    {% elif not key.is_active %}
+                                        <a href="{{ url_for('reseller_activate_key', key_id=key.id) }}" class="btn btn-sm btn-outline-success">
+                                            <i class="bi bi-check-circle"></i> Activate
+                                        </a>
+                                    {% endif %}
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
@@ -77,5 +452,68 @@
             </div>
         </div>
     </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        (function() {
+            const body = document.body;
+            const themeToggle = document.getElementById('themeToggle');
+            const themeIcon = document.getElementById('themeIcon');
+            const themeText = document.getElementById('themeText');
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            const mobileBtn = document.getElementById('mobileMenuBtn');
+
+            // Theme management
+            function setTheme(theme) {
+                if (theme === 'dark') {
+                    body.classList.add('dark');
+                    themeIcon.className = 'bi bi-sun-fill';
+                    themeText.textContent = 'Light Mode';
+                    localStorage.setItem('theme', 'dark');
+                } else {
+                    body.classList.remove('dark');
+                    themeIcon.className = 'bi bi-moon-stars';
+                    themeText.textContent = 'Dark Mode';
+                    localStorage.setItem('theme', 'light');
+                }
+            }
+
+            const storedTheme = localStorage.getItem('theme');
+            if (storedTheme) {
+                setTheme(storedTheme);
+            } else {
+                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                setTheme(prefersDark ? 'dark' : 'light');
+            }
+
+            themeToggle.addEventListener('click', () => {
+                const isDark = body.classList.contains('dark');
+                setTheme(isDark ? 'light' : 'dark');
+            });
+
+            // Mobile sidebar
+            function openSidebar() {
+                sidebar.classList.add('open');
+                overlay.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            }
+            function closeSidebar() {
+                sidebar.classList.remove('open');
+                overlay.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+
+            mobileBtn.addEventListener('click', openSidebar);
+            overlay.addEventListener('click', closeSidebar);
+
+            document.querySelectorAll('.sidebar-nav a').forEach(link => {
+                link.addEventListener('click', () => {
+                    if (window.innerWidth <= 992) closeSidebar();
+                });
+            });
+        })();
+    </script>
 </body>
 </html>
