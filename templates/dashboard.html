@@ -4,66 +4,366 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard • Key Manager</title>
+    <!-- Bootstrap 5.3 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <style>
-        body { background: #f1f5f9; font-family: 'Inter', system-ui, sans-serif; }
-        .navbar { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); padding: 16px 0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
-        .navbar-brand { font-weight: 700; color: white !important; }
-        .stats-card { border: none; border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); background: white; padding: 20px; }
-        .table-card { border: none; border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); overflow: hidden; background: white; }
-        .badge-active { background: #dcfce7; color: #166534; }
-        .badge-expired { background: #fef9c3; color: #854d0e; }
-        .badge-revoked { background: #fee2e2; color: #991b1b; }
-        .btn-outline-action { border-radius: 8px; border: 1px solid #e2e8f0; color: #64748b; padding: 6px 12px; }
+        :root {
+            --bg: #f1f5f9;
+            --surface: #ffffff;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --nav-start: #1e293b;
+            --nav-end: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+            --shadow: 0 4px 6px -1px rgba(0,0,0,0.06), 0 2px 4px -2px rgba(0,0,0,0.05);
+            --shadow-lg: 0 20px 25px -5px rgba(0,0,0,0.08), 0 8px 10px -6px rgba(0,0,0,0.04);
+            --radius-md: 18px;
+            --radius-sm: 12px;
+            --transition: 0.25s cubic-bezier(0.2, 0, 0, 1);
+        }
+
+        body {
+            background: var(--bg);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            color: #0f172a;
+        }
+
+        /* Navbar */
+        .navbar {
+            background: linear-gradient(135deg, var(--nav-start) 0%, var(--nav-end) 100%);
+            padding: 14px 0;
+            box-shadow: var(--shadow-lg);
+            backdrop-filter: blur(4px);
+            position: sticky;
+            top: 0;
+            z-index: 1020;
+        }
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.35rem;
+            color: white !important;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: var(--transition);
+        }
+        .navbar-brand i {
+            font-size: 1.6rem;
+            background: rgba(255,255,255,0.13);
+            padding: 8px;
+            border-radius: 12px;
+            box-shadow: 0 0 15px rgba(59,130,246,0.3);
+        }
+        .navbar-brand:hover {
+            transform: scale(1.02);
+        }
+        .nav-link {
+            font-weight: 500;
+            display: flex !important;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px !important;
+            border-radius: 50px;
+            transition: var(--transition);
+            margin-left: 4px;
+        }
+        .nav-link:hover {
+            background: rgba(255,255,255,0.12);
+            transform: translateY(-1px);
+        }
+
+        /* Cards */
+        .stats-card, .table-card {
+            background: var(--surface);
+            border: none;
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow);
+            padding: 24px;
+            margin-bottom: 28px;
+            transition: var(--transition);
+            animation: fadeInUp 0.5s ease-out both;
+        }
+        .stats-card:hover, .table-card:hover {
+            box-shadow: var(--shadow-lg);
+            transform: translateY(-2px);
+        }
+        .table-card {
+            padding: 0;
+            overflow: hidden;
+        }
+        .card-header {
+            background: transparent;
+            border-bottom: 1px solid var(--border);
+            padding: 20px 24px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .card-header i {
+            font-size: 1.4rem;
+            color: var(--primary);
+            background: rgba(59,130,246,0.1);
+            padding: 8px;
+            border-radius: 10px;
+        }
+
+        /* Stagger animation */
+        .stats-card:nth-child(1) { animation-delay: 0.05s; }
+        .table-card:nth-child(2) { animation-delay: 0.15s; }
+        .table-card:nth-child(3) { animation-delay: 0.25s; }
+        .table-card:nth-child(4) { animation-delay: 0.35s; }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Form controls */
+        .form-control, .form-select {
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            padding: 10px 16px;
+            transition: var(--transition);
+            box-shadow: var(--shadow-sm);
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+        }
+
+        /* Enhanced Buttons */
+        .btn {
+            border-radius: 12px;
+            padding: 10px 22px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: var(--transition);
+            border: none;
+            letter-spacing: -0.01em;
+        }
+        .btn-primary {
+            background: linear-gradient(145deg, #3b82f6, #2563eb);
+            box-shadow: 0 4px 12px rgba(59,130,246,0.3);
+            color: #fff;
+        }
+        .btn-primary:hover {
+            background: linear-gradient(145deg, #2563eb, #1d4ed8);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 18px rgba(37,99,235,0.35);
+        }
+        .btn-outline-action {
+            background: white;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 6px 14px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+        }
+        .btn-outline-action:hover {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+            transform: translateY(-1px);
+        }
+        .btn-outline-warning, .btn-outline-success, .btn-outline-danger {
+            border-radius: 10px;
+            padding: 5px 14px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border-width: 2px;
+        }
+        .btn-outline-warning {
+            color: #b45309;
+            border-color: #fbbf24;
+            background: #fffbeb;
+        }
+        .btn-outline-warning:hover {
+            background: #fef3c7;
+            color: #92400e;
+            border-color: #f59e0b;
+            transform: translateY(-1px);
+        }
+        .btn-outline-success {
+            color: #166534;
+            border-color: #86efac;
+            background: #f0fdf4;
+        }
+        .btn-outline-success:hover {
+            background: #dcfce7;
+            color: #14532d;
+            border-color: #4ade80;
+            transform: translateY(-1px);
+        }
+        .btn-outline-danger {
+            color: #991b1b;
+            border-color: #fecaca;
+            background: #fef2f2;
+        }
+        .btn-outline-danger:hover {
+            background: #fee2e2;
+            color: #7f1d1d;
+            border-color: #f87171;
+            transform: translateY(-1px);
+        }
+
+        /* Badges */
+        .badge-active {
+            background: #dcfce7;
+            color: #166534;
+            border-radius: 50px;
+            padding: 5px 14px;
+            font-weight: 600;
+        }
+        .badge-expired {
+            background: #fef9c3;
+            color: #854d0e;
+            border-radius: 50px;
+            padding: 5px 14px;
+            font-weight: 600;
+        }
+        .badge-revoked {
+            background: #fee2e2;
+            color: #991b1b;
+            border-radius: 50px;
+            padding: 5px 14px;
+            font-weight: 600;
+        }
+        .badge-success {
+            background: #d1fae5;
+            color: #065f46;
+            border-radius: 50px;
+            padding: 5px 14px;
+        }
+        .badge-secondary {
+            background: #e2e8f0;
+            color: #334155;
+            border-radius: 50px;
+            padding: 5px 14px;
+        }
+
+        /* Tables */
+        .table {
+            margin-bottom: 0;
+        }
+        .table thead th {
+            background: #f8fafc;
+            font-weight: 600;
+            color: #475569;
+            border-bottom: 2px solid #e2e8f0;
+            padding: 14px 20px;
+            letter-spacing: 0.02em;
+        }
+        .table tbody td {
+            padding: 14px 20px;
+            vertical-align: middle;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .table tbody tr {
+            transition: background 0.15s ease;
+        }
+        .table tbody tr:hover {
+            background: #f8fafc;
+        }
+        code {
+            background: #f1f5f9;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            color: #1e293b;
+            border: 1px solid #e2e8f0;
+        }
+
+        /* Alert animation */
+        .alert {
+            border-radius: var(--radius-sm);
+            border: none;
+            box-shadow: var(--shadow-sm);
+            animation: fadeInUp 0.4s ease-out both;
+            backdrop-filter: blur(4px);
+        }
+        .alert-dismissible .btn-close {
+            padding: 1rem;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .navbar-brand { font-size: 1.1rem; }
+            .navbar-nav { gap: 6px; }
+        }
     </style>
 </head>
 <body>
+    <!-- Navbar -->
     <nav class="navbar navbar-expand-lg">
         <div class="container-fluid px-4">
-            <a class="navbar-brand" href="#"><i class="bi bi-key-fill"></i> Key Manager Admin</a>
-            <div class="navbar-nav ms-auto">
-                <a class="nav-link text-white" href="{{ url_for('create_key') }}"><i class="bi bi-plus-circle"></i> Create Key</a>
-                <a class="nav-link text-white" href="{{ url_for('logout') }}"><i class="bi bi-box-arrow-right"></i> Logout</a>
+            <a class="navbar-brand" href="#">
+                <i class="bi bi-key-fill"></i> Key Manager Admin
+            </a>
+            <div class="navbar-nav ms-auto flex-row align-items-center">
+                <a class="nav-link text-white" href="{{ url_for('create_key') }}">
+                    <i class="bi bi-plus-circle"></i> Create Key
+                </a>
+                <a class="nav-link text-white" href="{{ url_for('logout') }}">
+                    <i class="bi bi-box-arrow-right"></i> Logout
+                </a>
             </div>
         </div>
     </nav>
 
+    <!-- Main Content -->
     <div class="container-fluid px-4 py-4">
+        <!-- Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    <div class="alert alert-{{ category }} alert-dismissible fade show d-flex align-items-center gap-3" role="alert">
+                        <i class="bi {% if category == 'success' %}bi-check-circle-fill text-success{% elif category == 'danger' %}bi-exclamation-triangle-fill text-danger{% else %}bi-info-circle-fill text-primary{% endif %} fs-5"></i>
+                        <span>{{ message }}</span>
+                        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
                 {% endfor %}
             {% endif %}
         {% endwith %}
 
         <!-- Referral Code Generator -->
-        <div class="stats-card mb-4">
-            <h5><i class="bi bi-gift"></i> Generate Referral Code for Resellers</h5>
+        <div class="stats-card">
+            <h5 class="mb-3 d-flex align-items-center gap-3">
+                <i class="bi bi-gift-fill fs-3 text-primary"></i> Generate Referral Code for Resellers
+            </h5>
             <form method="POST" action="{{ url_for('generate_referral') }}" class="row g-3 align-items-end">
-                <div class="col-auto">
-                    <label class="form-label">Balance (days) <small>(₱1 = 1 day)</small></label>
-                    <input type="number" class="form-control" name="balance" min="1" required>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Balance (days) <small class="text-muted fw-normal">(₱1 = 1 day)</small></label>
+                    <input type="number" class="form-control" name="balance" min="1" placeholder="e.g., 30" required>
                 </div>
                 <div class="col-auto">
-                    <button type="submit" class="btn btn-primary">Generate Referral Code</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-plus-circle-dotted"></i> Generate Referral Code
+                    </button>
                 </div>
             </form>
         </div>
 
         <!-- Referral Codes List -->
-        <div class="table-card mb-4">
-            <div class="card-header bg-white p-4 border-0">
-                <h5 class="mb-0"><i class="bi bi-ticket-perforated"></i> Referral Codes</h5>
+        <div class="table-card">
+            <div class="card-header">
+                <i class="bi bi-ticket-perforated-fill"></i> Referral Codes
             </div>
             <div class="table-responsive">
-                <table class="table mb-0">
+                <table class="table align-middle">
                     <thead>
-                        <tr><th>Code</th><th>Balance (days)</th><th>Status</th><th>Created</th><th>Used By</th></tr>
+                        <tr>
+                            <th>Code</th>
+                            <th>Balance (days)</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Used By</th>
+                        </tr>
                     </thead>
                     <tbody>
                         {% for code in referral_codes %}
@@ -72,9 +372,9 @@
                             <td>{{ code.balance_days }}</td>
                             <td>
                                 {% if code.is_used %}
-                                    <span class="badge bg-secondary">Used</span>
+                                    <span class="badge badge-secondary">Used</span>
                                 {% else %}
-                                    <span class="badge bg-success">Available</span>
+                                    <span class="badge badge-success">Available</span>
                                 {% endif %}
                             </td>
                             <td>{{ code.created_at.strftime('%Y-%m-%d') }}</td>
@@ -87,23 +387,29 @@
         </div>
 
         <!-- Resellers List -->
-        <div class="table-card mb-4">
-            <div class="card-header bg-white p-4 border-0">
-                <h5 class="mb-0"><i class="bi bi-people"></i> Resellers</h5>
+        <div class="table-card">
+            <div class="card-header">
+                <i class="bi bi-people-fill"></i> Resellers
             </div>
             <div class="table-responsive">
-                <table class="table mb-0">
+                <table class="table align-middle">
                     <thead>
-                        <tr><th>Username</th><th>Full Name</th><th>Balance (days)</th><th>Joined</th><th>Keys Created</th></tr>
+                        <tr>
+                            <th>Username</th>
+                            <th>Full Name</th>
+                            <th>Balance (days)</th>
+                            <th>Joined</th>
+                            <th>Keys Created</th>
+                        </tr>
                     </thead>
                     <tbody>
                         {% for r in resellers %}
                         <tr>
-                            <td>{{ r.username }}</td>
+                            <td><strong>{{ r.username }}</strong></td>
                             <td>{{ r.full_name }}</td>
                             <td>{{ r.balance_days }}</td>
                             <td>{{ r.created_at.strftime('%Y-%m-%d') }}</td>
-                            <td>{{ r.keys|length }}</td>
+                            <td><span class="badge bg-primary bg-opacity-10 text-primary px-3">{{ r.keys|length }}</span></td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -113,13 +419,20 @@
 
         <!-- Admin's Keys -->
         <div class="table-card">
-            <div class="card-header bg-white p-4 border-0">
-                <h5 class="mb-0"><i class="bi bi-key"></i> Your License Keys (Admin)</h5>
+            <div class="card-header">
+                <i class="bi bi-key-fill"></i> Your License Keys (Admin)
             </div>
             <div class="table-responsive">
-                <table class="table mb-0">
+                <table class="table align-middle">
                     <thead>
-                        <tr><th>Key</th><th>Created</th><th>Expires</th><th>Status</th><th>Notes</th><th>Actions</th></tr>
+                        <tr>
+                            <th>Key</th>
+                            <th>Created</th>
+                            <th>Expires</th>
+                            <th>Status</th>
+                            <th>Notes</th>
+                            <th>Actions</th>
+                        </tr>
                     </thead>
                     <tbody>
                         {% for key in keys %}
@@ -129,16 +442,26 @@
                             <td>{{ key.expires_at.strftime('%Y-%m-%d') if key.expires_at else 'Never' }}</td>
                             <td>
                                 {% set status = key.status() %}
-                                <span class="badge {% if status == 'Active' %}badge-active{% elif status == 'Expired' %}badge-expired{% else %}badge-revoked{% endif %}">{{ status }}</span>
+                                <span class="badge {% if status == 'Active' %}badge-active{% elif status == 'Expired' %}badge-expired{% else %}badge-revoked{% endif %}">
+                                    <i class="bi {% if status == 'Active' %}bi-shield-check{% elif status == 'Expired' %}bi-clock-history{% else %}bi-slash-circle{% endif %} me-1"></i>{{ status }}
+                                </span>
                             </td>
                             <td>{{ key.notes or '-' }}</td>
                             <td>
-                                {% if key.is_active and not key.is_expired() %}
-                                    <a href="{{ url_for('revoke_key', key_id=key.id) }}" class="btn btn-sm btn-outline-warning">Revoke</a>
-                                {% elif not key.is_active %}
-                                    <a href="{{ url_for('activate_key', key_id=key.id) }}" class="btn btn-sm btn-outline-success">Activate</a>
-                                {% endif %}
-                                <a href="{{ url_for('delete_key', key_id=key.id) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete permanently?')">Delete</a>
+                                <div class="d-flex gap-2 flex-wrap">
+                                    {% if key.is_active and not key.is_expired() %}
+                                        <a href="{{ url_for('revoke_key', key_id=key.id) }}" class="btn btn-sm btn-outline-warning">
+                                            <i class="bi bi-x-circle"></i> Revoke
+                                        </a>
+                                    {% elif not key.is_active %}
+                                        <a href="{{ url_for('activate_key', key_id=key.id) }}" class="btn btn-sm btn-outline-success">
+                                            <i class="bi bi-check-circle"></i> Activate
+                                        </a>
+                                    {% endif %}
+                                    <a href="{{ url_for('delete_key', key_id=key.id) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete permanently?')">
+                                        <i class="bi bi-trash3"></i> Delete
+                                    </a>
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
@@ -147,5 +470,8 @@
             </div>
         </div>
     </div>
+
+    <!-- Bootstrap JS for dismissible alerts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
