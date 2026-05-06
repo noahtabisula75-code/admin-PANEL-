@@ -322,7 +322,9 @@
             background: var(--surface-hover);
             border-color: #94a3b8;
         }
-        .btn-outline-warning, .btn-outline-success, .btn-outline-danger {
+
+        /* Action button variants (warning, success, danger, info) */
+        .btn-outline-warning, .btn-outline-success, .btn-outline-danger, .btn-outline-info {
             border-radius: 10px;
             padding: 5px 14px;
             font-size: 0.85rem;
@@ -347,6 +349,12 @@
             background: #fef2f2;
         }
         .btn-outline-danger:hover { background: #fee2e2; }
+        .btn-outline-info {
+            color: #1e40af;
+            border-color: #93c5fd;
+            background: #eff6ff;
+        }
+        .btn-outline-info:hover { background: #dbeafe; }
 
         .badge-active { background: #dcfce7; color: #166534; border-radius: 50px; padding: 4px 12px; }
         .badge-expired { background: #fef9c3; color: #854d0e; border-radius: 50px; padding: 4px 12px; }
@@ -541,7 +549,7 @@
             </div>
         </div>
 
-        <!-- License Keys Table -->
+        <!-- License Keys Table (with Device Binding) -->
         <div class="section-card" id="keys-section">
             <div class="card-header-custom">
                 <i class="bi bi-key-fill"></i> Your License Keys (Admin)
@@ -549,7 +557,15 @@
             <div class="table-responsive">
                 <table class="table align-middle">
                     <thead>
-                        <tr><th>Key</th><th>Created</th><th>Expires</th><th>Status</th><th>Notes</th><th>Actions</th></tr>
+                        <tr>
+                            <th>Key</th>
+                            <th>Created</th>
+                            <th>Expires</th>
+                            <th>Status</th>
+                            <th>Binding</th>
+                            <th>Notes</th>
+                            <th>Actions</th>
+                        </tr>
                     </thead>
                     <tbody>
                         {% for key in keys %}
@@ -563,6 +579,17 @@
                                     <i class="bi {% if status == 'Active' %}bi-shield-check{% elif status == 'Expired' %}bi-clock-history{% else %}bi-slash-circle{% endif %} me-1"></i>{{ status }}
                                 </span>
                             </td>
+                            <td>
+                                {% if key.device_id %}
+                                    <span class="badge bg-info bg-opacity-10 text-info px-2" title="Device ID: {{ key.device_id }}">
+                                        <i class="bi bi-lock-fill me-1"></i> Bound
+                                    </span>
+                                {% else %}
+                                    <span class="badge badge-secondary">
+                                        <i class="bi bi-unlock me-1"></i> Unbound
+                                    </span>
+                                {% endif %}
+                            </td>
                             <td>{{ key.notes or '-' }}</td>
                             <td>
                                 <div class="d-flex gap-2 flex-wrap">
@@ -572,6 +599,9 @@
                                         <a href="{{ url_for('activate_key', key_id=key.id) }}" class="btn btn-sm btn-outline-success"><i class="bi bi-check-circle"></i> Activate</a>
                                     {% endif %}
                                     <a href="{{ url_for('delete_key', key_id=key.id) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete permanently?')"><i class="bi bi-trash3"></i> Delete</a>
+                                    {% if key.device_id %}
+                                        <a href="{{ url_for('unbind_key', key_id=key.id) }}" class="btn btn-sm btn-outline-info" onclick="return confirm('Unbind this key from its current device?')"><i class="bi bi-unlock-fill"></i> Unbind</a>
+                                    {% endif %}
                                 </div>
                             </td>
                         </tr>
