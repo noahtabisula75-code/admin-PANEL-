@@ -7,6 +7,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
+from sqlalchemy import inspect
 
 app = Flask(__name__)
 
@@ -85,6 +86,9 @@ class LicenseKey(db.Model):
     created_by_admin_id = db.Column(db.Integer, db.ForeignKey('admin.id'), nullable=True)
     created_by_reseller_id = db.Column(db.Integer, db.ForeignKey('reseller.id'), nullable=True)
 
+    # ====== NEW: device binding ======
+    device_id = db.Column(db.String(255), nullable=True)   # None = not yet bound to any device
+
     def is_expired(self):
         if self.expires_at is None:
             return False
@@ -136,11 +140,31 @@ def reseller_required(f):
     return decorated_function
 
 
-# ==================== DATABASE INIT ====================
+# ==================== DATABASE INIT & MIGRATION ====================
+
+def add_device_id_column_if_not_exists():
+    """Add the `device_id` column to `license_key` if it doesn't exist."""
+    with db.engine.connect() as conn:
+        inspector = inspect(db.engine)
+        columns = [col['name'] for col in inspector.get_columns('license_key')]
+        if 'device_id' not in columns:
+            # SQLite / PostgreSQL compatible
+            conn.execute(db.text("ALTER TABLE license_key ADD COLUMN device_id VARCHAR(255)"))
+            conn.commit()
+            print("✅ Added device_id column to license_key table")
+
 
 @app.before_request
 def ensure_database():
     db.create_all()
+    # Auto-migration: add the new column to existing databases
+    try:
+        add_device_id_column_if_not_exists()
+    except Exception as e:
+        # Table may not exist yet on very first run; ignore
+        print(f"Migration notice: {e}")
+
+    # Create default admin if none exists
     if not Admin.query.first():
         admin = Admin(username='admin')
         admin.set_password('admin123')
@@ -245,6 +269,20 @@ def delete_key(key_id):
     db.session.delete(key)
     db.session.commit()
     flash(f'Key {key.key} has been deleted permanently.', 'danger')
+    return redirect(url_for('dashboard'))
+
+
+@app.route('/unbind/<int:key_id>')
+@admin_required
+def unbind_key(key_id):
+    """Reset the device binding of a key (admin only)."""
+    key = LicenseKey.query.get_or_404(key_id)
+    if key.device_id is None:
+        flash('Key is not bound to any device.', 'info')
+    else:
+        key.device_id = None
+        db.session.commit()
+        flash(f'Device binding for key {key.key} has been reset.', 'success')
     return redirect(url_for('dashboard'))
 
 
@@ -394,6 +432,23 @@ def reseller_activate_key(key_id):
     return redirect(url_for('reseller_dashboard'))
 
 
+@app.route('/reseller/unbind/<int:key_id>')
+@reseller_required
+def reseller_unbind_key(key_id):
+    """Reseller can reset the device binding of their own key."""
+    key = LicenseKey.query.get_or_404(key_id)
+    if key.created_by_reseller_id != current_user.id:
+        flash('Unauthorized.', 'danger')
+        return redirect(url_for('reseller_dashboard'))
+    if key.device_id is None:
+        flash('Key is not bound to any device.', 'info')
+    else:
+        key.device_id = None
+        db.session.commit()
+        flash(f'Device binding for key {key.key} has been reset.', 'success')
+    return redirect(url_for('reseller_dashboard'))
+
+
 # ==================== API ENDPOINT ====================
 
 @app.route('/api/validate_key', methods=['POST'])
@@ -403,17 +458,38 @@ def validate_key():
         return {'valid': False, 'message': 'Invalid request'}, 400
 
     key = data.get('key')
-    if not key:
-        return {'valid': False, 'message': 'Key required'}, 400
+    device_id = data.get('device_id')          # now required
+    if not key or not device_id:
+        return {'valid': False, 'message': 'Key and device_id required'}, 400
 
     license_key = LicenseKey.query.filter_by(key=key).first()
-    if license_key and license_key.is_active and not license_key.is_expired():
+    if not license_key:
+        return {'valid': False, 'message': 'Invalid key'}, 403
+    if not license_key.is_active:
+        return {'valid': False, 'message': 'Key has been revoked'}, 403
+    if license_key.is_expired():
+        return {'valid': False, 'message': 'Key has expired'}, 403
+
+    # Device binding logic
+    if license_key.device_id is None:
+        # First time – bind to this device
+        license_key.device_id = device_id
+        db.session.commit()
         return {
             'valid': True,
             'expires': license_key.expires_at.isoformat() if license_key.expires_at else None,
             'notes': license_key.notes
         }
-    return {'valid': False, 'message': 'Invalid or expired key'}, 403
+    elif license_key.device_id == device_id:
+        # Already bound to this device – valid
+        return {
+            'valid': True,
+            'expires': license_key.expires_at.isoformat() if license_key.expires_at else None,
+            'notes': license_key.notes
+        }
+    else:
+        # Bound to a different device
+        return {'valid': False, 'message': 'Key is already bound to another device'}, 403
 
 
 # ==================== RUN ====================
